@@ -1,0 +1,6 @@
+envTestFutures.py
+.vscode
+__pycache__
+venv
+trash
+trading-bot.db

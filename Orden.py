@@ -1,6 +1,5 @@
 class Orden:
     def __init__(self, interval):
-
         self.interval = interval
 
 

@@ -83,7 +83,7 @@ class DatabaseManager:
 
 
 
-    def guardar_orden_db(self, registro, tipo, estado, origen):
+    def guardar_orden_db(self, registro, estado, tipo, origen):
         registro = registro.iloc[0]     
 
         cursor = self.conn.cursor()
@@ -95,8 +95,8 @@ class DatabaseManager:
     float(registro['quote_asset_volume']), float(registro['number_of_trades']),
     float(registro['taker_buy_base_asset_volume']), float(registro['taker_buy_quote_asset_volume']),
     float(registro['ignore']), float(registro['MA_corta']), float(registro['MA_media']), float(registro['MA_larga']),
-    tipo,
     estado,
+    tipo,
     origen
 ))
         self.conn.commit()
@@ -106,7 +106,8 @@ class DatabaseManager:
         cursor = self.conn.cursor()
         cursor.execute('SELECT * FROM ordenes')
         registros = cursor.fetchall()
-        return registros
+        df = pd.read_sql_query("SELECT * FROM ordenes", self.conn)
+        return df
         
 
     def obtenerUltimas2Websocket(self):

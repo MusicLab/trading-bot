@@ -2,33 +2,44 @@ import json
 import websockets
 from datetime import datetime
 import asyncio
+from loggerConfig import logger
+
 
 class Websocket:
     def __init__(self):
         self.ws = None
-        self.origen = None
+        self.interval = None
+        self.intentos_reconexion = 0
+        self.max_intentos_reconexion = 15
 
-    async def conectar_socket(self, origen):
-        self.origen = origen
-        if origen == "1MINUTE":
-            self.ws = await websockets.connect("wss://fstream.binance.com/ws/btcusdt@kline_1m")
-            print("CONECTE SOCKET 1MINUTE")
-        elif origen == "15MINUTE":
-            self.ws = await websockets.connect("wss://fstream.binance.com/ws/btcusdt@kline_15m")
-            print("CONECTE SOCKET 15MINUTE")
-        elif origen == "1HOUR":
-            self.ws = await websockets.connect("wss://fstream.binance.com/ws/btcusdt@kline_1h")
-            print("CONECTE SOCKET 1HOUR")
+
+    async def conectar_socket(self, interval, testnet = False):
+        self.interval = interval
+
+        if testnet:
+            url = f"wss://stream.binancefuture.com/ws/btcusdt@kline_{self.interval}"
+        else:
+            url = f"wss://fstream.binance.com/ws/btcusdt@kline_{self.interval}"
+        
+        try:
+            self.ws = await websockets.connect(url)
+            mensaje = "Testnet" if testnet else "Real"
+            logger.info(f"CONECTE SOCKET {interval} {mensaje}")  # Registro de información con logger
+            self.intentos_reconexion = 0  # Restablecer el contador de intentos de reconexión en caso de conexión exitosa
+        except Exception as e:
+            logger.error(f"Error al conectar: {e}")  # Registro de error con logger
+            await self.reconectar()
 
     async def recibir_y_procesar(self):
         try:
             async for msg in self.ws:
                 res = json.loads(msg)
-                if res['k']['x'] == True:
+                if res.get('k', {}).get('x') == True:
                     resProcesada = await self.procesar_mensaje(res)
+                    print(resProcesada)
                     return resProcesada
         except websockets.exceptions.ConnectionClosedError:
-            print("Websocket desconectado. Intentando reconectar...")
+            logger.warning("Websocket desconectado. Intentando reconectar...")  # Registro de advertencia con logger
             await self.reconectar()
 
     async def procesar_mensaje(self, res):
@@ -47,14 +58,13 @@ class Websocket:
         return resProcesada
 
     async def reconectar(self):
-        while True:
-            try:
-                await self.conectar_socket(self.origen)
-                print("Reconexión exitosa!")
-                return
-            except Exception as e:
-                print(f"Error al reconectar: {e}")
-                await asyncio.sleep(5)
+        if self.intentos_reconexion < self.max_intentos_reconexion:
+            self.intentos_reconexion += 1
+            await asyncio.sleep(3)  # Espera antes de intentar reconectar
+            await self.conectar_socket(self.interval)
+        else:
+            logger.error("Se alcanzó el máximo de intentos de reconexión")  # Registro de error con logger
 
     async def cerrar_conexion(self):
-        await self.ws.close()
+        if self.ws:
+            await self.ws.close()

@@ -1,6 +1,11 @@
+from PrivateApi import PrivateApi
+from envTestFutures import api_key, api_secret
+
+
 class Orden:
     def __init__(self, interval):
         self.interval = interval
+
 
 
     def procesarOrdenDb(self, df, db):
@@ -9,26 +14,52 @@ class Orden:
         ma_media = df['MA_media'].iloc[-1]
         ma_media_pre = df['MA_media'].iloc[-2]
         ma_larga = df['MA_larga'].iloc[-1]
-        
-        if ma_corta_pre < ma_media_pre and ma_corta > ma_media and ma_larga < ma_corta and ma_larga < ma_media:            
-            #self.abrir_long()
+        ma_larga_pre = df['MA_larga'].iloc[-2]
+
+        corte_corta_media = ma_corta_pre < ma_media_pre and ma_corta > ma_media
+        corte_media_corta = ma_corta_pre > ma_media_pre and ma_corta < ma_media
+
+        corte_corta_larga = ma_corta_pre < ma_larga_pre and ma_corta > ma_larga
+        corte_larga_corta = ma_corta_pre > ma_larga_pre and ma_corta < ma_larga
+
+        corte_media_larga = ma_media_pre < ma_larga_pre and ma_media > ma_larga
+        corte_larga_media = ma_media_pre > ma_larga_pre and ma_media < ma_larga
+
+        if (corte_corta_media and ma_corta > ma_larga) or (corte_corta_larga and ma_corta > ma_media):
+            print("Abre long")
             db.guardar_orden_db(df.tail(1), "long", "abierto", self.interval)
-            print("se abre long")
+            request = PrivateApi("BTCUSDT",api_key, api_secret, testnet=True)
+            get_position = float(request.get_positions()[0]['positionAmt'])
+            if get_position < 0:
+                request.abrir_posicion("BUY", 0.2)
+            elif get_position == 0:
+                request.abrir_posicion("BUY", 0.1)    
+            else: 
+                pass
 
-        elif ma_corta_pre > ma_media_pre and ma_corta < ma_media and ma_larga > ma_corta and ma_larga > ma_media:
-            #self.abrir_short()
+
+
+        elif (corte_media_corta and ma_corta < ma_larga) or (corte_media_larga and ma_corta < ma_media):
+            print("Abre short")
             db.guardar_orden_db(df.tail(1), "short", "abierto", self.interval)
-            print("se abre short")
+            request = PrivateApi("BTCUSDT",api_key, api_secret, testnet=True)
+            get_position = float(request.get_positions()[0]['positionAmt'])
+            if get_position > 0:
+                request.abrir_posicion("SELL", 0.2)
+            elif get_position == 0:
+                request.abrir_posicion("SELL", 0.1)    
+            else: 
+                pass
 
-        elif ma_corta_pre > ma_media_pre and ma_corta < ma_media and ma_larga < ma_corta and ma_larga < ma_media:
-            #self.cerrar_long()
-            db.guardar_orden_db(df.tail(1), "long", "cerrado", self.interval)
-            print("se cierra long")
         
-        elif ma_corta_pre < ma_media_pre and ma_corta > ma_media and ma_larga > ma_corta and ma_larga > ma_media:
-            #self.cerrar_short()
-            db.guardar_orden_db(df.tail(1), "short", "cerrado", self.interval)
-            print("se cierra short")
 
-        else:
-            print("no pasa nada", "desde Orden")
+    
+
+
+        
+
+
+
+
+
+

@@ -5,8 +5,8 @@ import asyncio
 import pandas as pd
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from RequestApi import *
-from Request import ApiCaller
+from PrivateApi import *
+from PublicApi import ApiCaller
 from envTestFutures import api_key, api_secret
 
 pd.set_option('display.max_columns', None)
@@ -26,8 +26,5 @@ class TestFunciones(unittest.TestCase):
         self.assertIsInstance(klines, pd.DataFrame)
         # Ejemplo de aserciones adicionales
         self.assertIsNotNone(klines)  # Verifica que el DataFrame no esté vacío
-
-    def test_ordenes(self):
-        pass
 
 
